@@ -19,7 +19,43 @@ type (
 		Size        int64
 		Committed   bool
 	}
+
+	PageParams interface {
+		Page() int       // 页码数
+		PageSize() int   //页面数量
+		Limit() []int    //分页
+		OrderBy() string //排序字段
+		Asc() bool       //排序顺序 默认为false,也就是默认倒序
+	}
+
+	PageParamsImpl struct {
+		Page_     int    `query:"page"`     //页码数
+		PageSize_ int    `query:"pageSize"` //页面数量
+		Limit_    []int  `query:"limit"`    //分页
+		OrderBy_  string `query:"orderBy"`  //排序字段
+		Asc_      bool   `query:"asc"`      //排序顺序 默认为false,也就是默认倒序
+	}
 )
+
+func (l *PageParamsImpl) Page() int {
+	return l.Page_
+}
+
+func (l *PageParamsImpl) PageSize() int {
+	return l.PageSize_
+}
+
+func (l *PageParamsImpl) Limit() []int {
+	return l.Limit_
+}
+
+func (l *PageParamsImpl) OrderBy() string {
+	return l.OrderBy_
+}
+
+func (l *PageParamsImpl) Asc() bool {
+	return l.Asc_
+}
 
 // NewResponse creates a new instance of Response.
 func NewResponse(w http.ResponseWriter, e *Echo) (r *Response) {

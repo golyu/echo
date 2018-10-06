@@ -84,6 +84,19 @@ type (
 		Validator        Validator
 		Renderer         Renderer
 		Logger           Logger
+		// *********************************************
+		Validation   Validation  //数据校验器
+		BusinessErrs BusinessErr //业务错误
+	}
+	// 业务错误
+	BusinessErr interface {
+		Error() string // 附加这个信息,主要是为了和error对象兼容,传递实际类型时,接收函数能接收
+		ErrStruct(code int, language string) *Err
+	}
+
+	// 数据校验器
+	Validation interface {
+		Valid(obj interface{}) (b bool, code int64, err error)
 	}
 
 	// Route contains a handler and information for matching against requests.
@@ -287,7 +300,7 @@ func New() (e *Echo) {
 	}
 	e.Server.Handler = e
 	e.TLSServer.Handler = e
-	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
+	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler_
 	e.Binder = &DefaultBinder{}
 	e.Logger.SetLevel(log.ERROR)
 	e.StdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
@@ -313,6 +326,42 @@ func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
 // Router returns router.
 func (e *Echo) Router() *Router {
 	return e.router
+}
+
+// DefaultHTTPErrorHandler_ 附加了返回指定错误码对应的业务错误信息
+func (e *Echo) DefaultHTTPErrorHandler_(err error, c Context) {
+	var (
+		code = http.StatusInternalServerError
+		msg  interface{}
+	)
+	if businessErrs, ok := err.(*Err); ok {
+		msg = businessErrs
+	} else if he, ok := err.(*HTTPError); ok {
+		code = he.Code
+		msg = he.Message
+		if he.Internal != nil {
+			err = fmt.Errorf("%v, %v", err, he.Internal)
+		}
+	} else if e.Debug {
+		msg = err.Error()
+	} else {
+		msg = http.StatusText(code)
+	}
+	if _, ok := msg.(string); ok {
+		msg = Map{"message": msg}
+	}
+
+	// Send response
+	if !c.Response().Committed {
+		if c.Request().Method == HEAD { // Issue #608
+			err = c.NoContent(code)
+		} else {
+			err = c.JSON(code, msg)
+		}
+		if err != nil {
+			e.Logger.Error(err)
+		}
+	}
 }
 
 // DefaultHTTPErrorHandler is the default HTTP error handler. It sends a JSON response
@@ -633,6 +682,16 @@ func (e *Echo) startTLS(address string) error {
 
 // StartServer starts a custom http server.
 func (e *Echo) StartServer(s *http.Server) (err error) {
+	// 数据校验器是否为空
+	if e.Validation == nil {
+		panic("没有给echo初始化数据校验器")
+	}
+
+	// 业务错误码的信息是否为空
+	if e.BusinessErrs == nil {
+		panic("没有给echo初始化业务错误码信息")
+	}
+
 	// Setup
 	e.colorer.SetOutput(e.Logger.Output())
 	s.ErrorLog = e.StdLogger

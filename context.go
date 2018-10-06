@@ -186,24 +186,125 @@ type (
 		// with `Echo#AcquireContext()` and `Echo#ReleaseContext()`.
 		// See `Echo#ServeHTTP()`
 		Reset(r *http.Request, w http.ResponseWriter)
+
+		// ************************ 附加的函数 ***************************
+
+		// 获取并校验信息
+		ValidRequest(column interface{}) error
+
+		// 获取并校验带分页的信息
+		ValidPageRequest(column ...interface{}) (PageParams, error)
+
+		// 返回错误,这个code是错误码,不是状态码
+		JSON4Error(code int) error
+
+		// 返回单个结果信息
+		JSON4Item(data interface{}) error
+
+		// 返回多条加分页信息
+		JSON4Pagination(data interface{}, totalCount int, curPageCount ...int) error
 	}
 
 	context struct {
-		request  *http.Request
-		response *Response
-		path     string
-		pnames   []string
-		pvalues  []string
-		query    url.Values
-		handler  HandlerFunc
-		store    Map
-		echo     *Echo
+		request    *http.Request
+		response   *Response
+		path       string
+		pnames     []string
+		pvalues    []string
+		query      url.Values
+		handler    HandlerFunc
+		store      Map
+		echo       *Echo
+		pageParams PageParams
 	}
 )
 
+func (c *context) ValidRequest(column interface{}) error {
+	//请求参数绑定
+	if err := c.Bind(column); err != nil {
+		return c.JSON4Error(PARAMS_BIND_ERROR)
+	}
+	//请求参数验证
+	ok, code, err := c.echo.Validation.Valid(column)
+	if err != nil {
+		panic("valid rule error:" + err.Error())
+	}
+	if !ok {
+		return c.JSON4Error(int(code))
+	}
+	return nil
+}
+
+func (c *context) ValidPageRequest(columns ...interface{}) (PageParams, error) {
+	if len(columns) > 0 {
+		column := columns[0]
+		//请求参数绑定
+		if err := c.Bind(column); err != nil {
+			return nil, c.JSON4Error(PARAMS_BIND_ERROR)
+		}
+		//请求参数验证
+		ok, code, err := c.echo.Validation.Valid(column)
+		if err != nil {
+			panic("valid rule error:" + err.Error())
+		}
+		if !ok {
+			return nil, c.JSON4Error(int(code))
+		}
+	}
+	//请求参数绑定分页,目前先分开进行绑定
+	pageParams := new(PageParamsImpl)
+	if err := c.Bind(pageParams); err != nil {
+		return nil, c.JSON4Error(PARAMS_BIND_ERROR)
+	}
+	if pageParams.Page_ < 1 {
+		pageParams.Page_ = 1
+	}
+	if pageParams.PageSize_ < 1 {
+		pageParams.PageSize_ = 50
+	} else {
+		if pageParams.PageSize_ >= 1000 {
+			pageParams.PageSize_ = 1000
+		}
+	}
+	offset := (pageParams.Page_ - 1) * pageParams.PageSize_
+	var limit = []int{pageParams.PageSize_, offset}
+	pageParams.Limit_ = limit
+	c.pageParams = pageParams
+	return pageParams, nil
+}
+
+// JSON4Error 返回业务错误
+func (c *context) JSON4Error(code int) error {
+	lang := getLang(c) //获取语言
+	err := c.echo.BusinessErrs.ErrStruct(code, lang)
+	return err
+}
+
+func (c *context) JSON4Item(data interface{}) error {
+	return c.JSON(200, data)
+}
+
+func (c *context) JSON4Pagination(data interface{}, totalCount int, curPageCount ...int) error {
+	var current int
+	// 计算页码
+	pageParams := c.pageParams.(*PageParamsImpl)
+	//当前页码
+	current = pageParams.Page_
+
+	return c.JSON(200, &Pagination{
+		Data: data,
+		Meta: Meta{
+			Total:     totalCount,
+			PageIndex: current,
+			PageSize:  pageParams.PageSize_,
+		},
+	})
+}
+
 const (
-	defaultMemory = 32 << 20 // 32 MB
-	indexPage     = "index.html"
+	defaultMemory                 = 32 << 20 // 32 MB
+	indexPage                     = "index.html"
+	TRANSLATE_LANGUAGE_HEADER_KEY = "language" //语言参数名称
 )
 
 func (c *context) writeContentType(value string) {
