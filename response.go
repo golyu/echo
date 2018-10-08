@@ -29,11 +29,11 @@ type (
 	}
 
 	PageParamsImpl struct {
-		Page_     int    `query:"page"`      //页码数
-		PageSize_ int    `query:"page_size"` //页面数量
-		Limit_    []int  `query:"limit"`     //分页
-		OrderBy_  string `query:"order_by"`  //排序字段
-		Asc_      bool   `query:"asc"`       //排序顺序 默认为false,也就是默认倒序
+		Page_     int    `query:"page_index"` //页码数
+		PageSize_ int    `query:"page_size"`  //页面数量
+		Limit_    []int  `query:"limit"`      //分页
+		OrderBy_  string `query:"order_by"`   //排序字段
+		Asc_      bool   `query:"asc"`        //排序顺序 默认为false,也就是默认倒序
 	}
 )
 
