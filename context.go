@@ -276,8 +276,11 @@ func (c *context) ValidPageRequest(columns ...interface{}) (PageParams, error) {
 // JSON4Error 返回业务错误
 func (c *context) JSON4Error(code int) error {
 	lang := getLang(c) //获取语言
-	err := c.echo.BusinessErrs.ErrStruct(code, lang)
-	return err
+	err, ok := c.echo.BusinessErrs[code]
+	if ok {
+		return err.ErrStruct(lang)
+	}
+	return &Err{88888888, "如果获取到这个错误,请检查代码逻辑"}
 }
 
 func (c *context) JSON4Item(data interface{}) error {

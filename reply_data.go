@@ -36,23 +36,39 @@ const (
 	PARAMS_CHICK_ERROR = 1003 // 参数校验错误
 )
 
-type BilingualMsg struct {
+type BilingualMsgGenerate struct {
 	Zh string //中文
 	En string //英文
 }
 
-var BASE_ERROR_CODE = map[int]BilingualMsg{
+type BilingualMsgConsume struct {
+	ZhErr *Err // 中文错误
+	EnErr *Err // 英文错误
+}
+
+func (b *BilingualMsgGenerate) Generate(code int) BusinessErr {
+	consume := new(BilingualMsgConsume)
+	consume.ZhErr = &Err{Code: code, Msg: b.Zh}
+	consume.EnErr = &Err{Code: code, Msg: b.En}
+	return consume
+}
+
+func (b *BilingualMsgConsume) ErrStruct(language string) *Err {
+	if language == EN {
+		return b.EnErr
+	}
+	return b.ZhErr
+}
+
+func (BilingualMsgConsume) Error() string {
+	return "兼容Error interface"
+}
+
+var BASE_ERROR_CODE = map[int]BilingualMsgGenerate{
 	DEFAULT_CODE:       {"默认错误", "Default error"},
 	SYSTEM_ERROR:       {"系统错误", "system error"},
 	PARAMS_BIND_ERROR:  {"参数绑定错误", "Parameter binding error"},
 	PARAMS_CHICK_ERROR: {"参数校验错误", "Parameter check error"},
-}
-
-func getMsg4Lang(lang string, codeObject BilingualMsg) string {
-	if lang == EN {
-		return codeObject.En
-	}
-	return codeObject.Zh
 }
 
 func getLang(c Context) string {

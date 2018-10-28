@@ -85,13 +85,18 @@ type (
 		Renderer         Renderer
 		Logger           Logger
 		// *********************************************
-		Validation   Validation  //数据校验器
-		BusinessErrs BusinessErr //业务错误
+		Validation   Validation          //数据校验器
+		BusinessErrs map[int]BusinessErr //业务错误
 	}
+	// 业务错误生产者
+	BusinessErrGenerate interface {
+		Generate(code int) BusinessErr
+	}
+
 	// 业务错误
 	BusinessErr interface {
 		Error() string // 附加这个信息,主要是为了和error对象兼容,传递实际类型时,接收函数能接收
-		ErrStruct(code int, language string) *Err
+		ErrStruct(language string) *Err
 	}
 
 	// 数据校验器
