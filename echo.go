@@ -340,6 +340,7 @@ func (e *Echo) DefaultHTTPErrorHandler_(err error, c Context) {
 		msg  interface{}
 	)
 	if businessErrs, ok := err.(*Err); ok {
+		code = 200
 		msg = businessErrs
 	} else if he, ok := err.(*HTTPError); ok {
 		code = he.Code
