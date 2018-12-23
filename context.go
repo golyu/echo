@@ -193,7 +193,7 @@ type (
 		ValidRequest(column interface{}) error
 
 		// 获取并校验带分页的信息
-		ValidPageRequest(column ...interface{}) (PageParams, error)
+		ValidPageRequest(column ...interface{}) (*PageParamsImpl, error)
 
 		// 返回错误,这个code是错误码,不是状态码
 		JSON4Error(code int) error
@@ -235,7 +235,7 @@ func (c *context) ValidRequest(column interface{}) error {
 	return nil
 }
 
-func (c *context) ValidPageRequest(columns ...interface{}) (PageParams, error) {
+func (c *context) ValidPageRequest(columns ...interface{}) (*PageParamsImpl, error) {
 	if len(columns) > 0 {
 		column := columns[0]
 		//请求参数绑定
