@@ -12,9 +12,9 @@ type (
 		Meta Meta        `json:"meta"`
 	}
 	Meta struct {
-		Total     int `json:"total"`      //数据总数
-		PageIndex int `json:"page_index"` //当前页码
-		PageSize  int `json:"page_size"`  //每页数据数量
+		Total     int `json:"total"`    //数据总数
+		PageIndex int `json:"current"`  //当前页码
+		PageSize  int `json:"pageSize"` //每页数据数量
 		//PageTotal       int `json:"page_total"`        //页码总数 ? ng框架不需要
 		//CurrentPageSize int `json:"current_page_size"` //当前页实际数据数量 ? ng框架不需要
 	}
